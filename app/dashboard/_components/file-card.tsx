@@ -23,6 +23,7 @@ import {
   FileTextIcon,
   GanttChartIcon,
   ImageIcon,
+  StarIcon,
   TrashIcon,
 } from "lucide-react";
 import {
@@ -43,6 +44,7 @@ import Image from "next/image";
 
 function FileCardActions({ file }: { file: Doc<"files"> }) {
   const deleteFile = useMutation(api.files.deleteFile);
+  const toggleFavorite = useMutation(api.files.toggleFavorite);
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
 
@@ -79,6 +81,17 @@ function FileCardActions({ file }: { file: Doc<"files"> }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem
+            onClick={() => {
+              toggleFavorite({
+                fileId: file._id,
+              });
+            }}
+            className="flex gap-1 cursor-pointer items-center font-light">
+            <StarIcon className="w-4 h-4" />
+            お気に入り
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
             onClick={() => setIsConfirmOpen(true)}
             className="flex gap-1 text-red-600  cursor-pointer items-center font-light">
             <TrashIcon className="w-4 h-4" />
@@ -100,8 +113,6 @@ export function FileCard({ file }: { file: Doc<"files"> }) {
     pdf: <FileTextIcon />,
     csv: <GanttChartIcon />,
   } as Record<Doc<"files">["type"], ReactNode>;
-
-  console.log(file);
 
   return (
     <Card>
