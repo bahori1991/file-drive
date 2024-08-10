@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EllipsisVertical, TrashIcon } from "lucide-react";
+import {
+  EllipsisVertical,
+  FileTextIcon,
+  GanttChartIcon,
+  ImageIcon,
+  TrashIcon,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,10 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useToast } from "@/components/ui/use-toast";
+import Image from "next/image";
 
 function FileCardActions({ file }: { file: Doc<"files"> }) {
   const deleteFile = useMutation(api.files.deleteFile);
@@ -44,9 +51,9 @@ function FileCardActions({ file }: { file: Doc<"files"> }) {
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>このファイルを削除しますか？</AlertDialogTitle>
+            <AlertDialogTitle>ファイルを削除しますか？</AlertDialogTitle>
             <AlertDialogDescription>
-              ファイルを削除します。削除後、元に戻すことはできません。
+              削除後、元に戻すことはできません。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -66,7 +73,6 @@ function FileCardActions({ file }: { file: Doc<"files"> }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
       <DropdownMenu>
         <DropdownMenuTrigger>
           <EllipsisVertical />
@@ -84,21 +90,51 @@ function FileCardActions({ file }: { file: Doc<"files"> }) {
   );
 }
 
+function getFileUrl(fileId: Id<"_storage">): string {
+  return `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${fileId}`;
+}
+
 export function FileCard({ file }: { file: Doc<"files"> }) {
+  const typeIcons = {
+    image: <ImageIcon />,
+    pdf: <FileTextIcon />,
+    csv: <GanttChartIcon />,
+  } as Record<Doc<"files">["type"], ReactNode>;
+
+  console.log(file);
+
   return (
     <Card>
       <CardHeader className="relative">
-        <CardTitle>{file.name}</CardTitle>
+        <CardTitle className="flex gap-2">
+          <div className="flex justify-center">{typeIcons[file.type]}</div>
+          {file.name}
+        </CardTitle>
+
         <div className="absolute top-2 right-2">
           <FileCardActions file={file} />
         </div>
         {/* <CardDescription>Card Description</CardDescription> */}
       </CardHeader>
       <CardContent>
-        <p>Card Content</p>
+        {file.type === "image" && (
+          <Image
+            alt={file.name}
+            width="200"
+            height="100"
+            src={getFileUrl(file.fileId)}
+          />
+        )}
+        {file.type === "csv" && <GanttChartIcon className="w-20 h-20" />}
+        {file.type === "pdf" && <FileTextIcon className="w-20 h-20" />}
       </CardContent>
-      <CardFooter>
-        <Button>ダウンロード</Button>
+      <CardFooter className="flex justify-center">
+        <Button
+          onClick={() => {
+            window.open(getFileUrl(file.fileId), "_blank");
+          }}>
+          ダウンロード
+        </Button>
       </CardFooter>
     </Card>
   );
