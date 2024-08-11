@@ -1,6 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { FileIcon, StarIcon } from "lucide-react";
-import Link from "next/link";
 import { SideNav } from "./side-nav";
 
 export default function DashboardLayout({
