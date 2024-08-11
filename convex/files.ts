@@ -8,7 +8,7 @@ import {
 } from "./_generated/server";
 import { getUser } from "./users";
 import { fileTypes } from "./schema";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 export const generateUploadUrl = mutation(async (ctx) => {
   const identity = await ctx.auth.getUserIdentity();
@@ -79,6 +79,7 @@ export const getFiles = query({
     query: v.optional(v.string()),
     favorites: v.optional(v.boolean()),
     deletedOnly: v.optional(v.boolean()),
+    type: v.optional(fileTypes),
   },
   async handler(ctx, args) {
     const hasAccess = await hasAccessToOrg(ctx, args.orgId);
@@ -119,6 +120,10 @@ export const getFiles = query({
       files = files.filter((file) => !file.shouldDelete);
     }
 
+    if (args.type) {
+      files = files.filter((file) => file.type === args.type);
+    }
+
     return files;
   },
 });
@@ -140,6 +145,16 @@ export const deleteAllFiles = internalMutation({
   },
 });
 
+function assertCanDeleteFile(user: Doc<"users">, file: Doc<"files">) {
+  const canDelete =
+    file.userId === user._id ||
+    user.orgIds.find((org) => org.orgId === file.orgId)?.role === "admin";
+
+  if (!canDelete) {
+    throw new Error("ファイルを削除するための権限がありません。");
+  }
+}
+
 export const deleteFile = mutation({
   args: { fileId: v.id("files") },
   async handler(ctx, args) {
@@ -149,13 +164,7 @@ export const deleteFile = mutation({
       throw new ConvexError("ファイルにアクセスすることができません。");
     }
 
-    const isAdmin =
-      access.user.orgIds.find((org) => org.orgId === access.file.orgId)
-        ?.role === "admin";
-
-    if (!isAdmin) {
-      throw new Error("ファイルを削除するための権限がありません。");
-    }
+    assertCanDeleteFile(access.user, access.file);
 
     await ctx.db.patch(args.fileId, {
       shouldDelete: true,
@@ -172,13 +181,7 @@ export const restoreFile = mutation({
       throw new ConvexError("ファイルにアクセスすることができません。");
     }
 
-    const isAdmin =
-      access.user.orgIds.find((org) => org.orgId === access.file.orgId)
-        ?.role === "admin";
-
-    if (!isAdmin) {
-      throw new Error("ファイルを削除するための権限がありません。");
-    }
+    assertCanDeleteFile(access.user, access.file);
 
     await ctx.db.patch(args.fileId, {
       shouldDelete: false,
